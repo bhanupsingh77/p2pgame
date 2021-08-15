@@ -1,5 +1,11 @@
+import Libp2pApp from "./component/Libp2pApp.js";
+
 function App() {
-  return <div className="p-2 text-red-500">hello world</div>;
+  return (
+    <div>
+      <Libp2pApp />
+    </div>
+  );
 }
 
 export default App;
