@@ -2,7 +2,11 @@
 import { Web3Storage } from "web3.storage/dist/bundle.esm.min.js";
 import { useState, useEffect, useReducer } from "react";
 import Loading from "../component/Loading.js";
-const GameProtocol = require("../component/Libp2pUtils.js");
+import {
+  send,
+  messageReceivedHandler,
+  PROTOCOL,
+} from "../component/Libp2pUtils.js";
 
 function getAccessToken() {
   // If you're just testing, you can paste in a token
@@ -40,16 +44,16 @@ const sendMessage = async (libp2p, message) => {
   //message sender
   libp2p.peerStore.peers.forEach(async (peerData) => {
     // If they dont support the game protocol, ignore
-    if (!peerData.protocols.includes(GameProtocol.PROTOCOL)) return;
+    if (!peerData.protocols.includes(PROTOCOL)) return;
 
     // If we're not connected, ignore
     const connection = libp2p.connectionManager.get(peerData.id);
     if (!connection) return;
 
     try {
-      const { stream } = await connection.newStream([GameProtocol.PROTOCOL]);
+      const { stream } = await connection.newStream([PROTOCOL]);
       let messageToSend = JSON.stringify({ message });
-      await GameProtocol.send(messageToSend, stream);
+      await send(messageToSend, stream);
     } catch (err) {
       console.error("Could not negotiate Game protocol stream with peer", err);
     }
@@ -160,10 +164,7 @@ function TicTacToe({ libp2p, player }) {
   useEffect(() => {
     if (!gameClient) {
       // Add game handler
-      libp2p.handle(
-        GameProtocol.PROTOCOL,
-        GameProtocol.messageReceivedHandler(setSentMessage)
-      );
+      libp2p.handle(PROTOCOL, messageReceivedHandler(setSentMessage));
 
       // Set the game client to so the handler add code doesn't run again
       setGameClient(true);
