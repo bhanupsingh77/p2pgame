@@ -1,7 +1,8 @@
 // import { Web3Storage } from "web3.storage";
 import { Web3Storage } from "web3.storage/dist/bundle.esm.min.js";
 import { useState, useEffect, useReducer } from "react";
-const GameProtocol = require("../component/Test02.js");
+import Loading from "../component/Loading.js";
+const GameProtocol = require("../component/Libp2pUtils.js");
 
 function getAccessToken() {
   // If you're just testing, you can paste in a token
@@ -12,7 +13,7 @@ function getAccessToken() {
   // environement variable or other configuration that's kept outside of
   // your code base. For this to work, you need to set the
   // WEB3STORAGE_TOKEN environment variable before you run your code.
-  return "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkaWQ6ZXRocjoweDVGQzU4RjVCMjkyRTYwQmI5ZUU0Nzg3NkUwMTY0MTdFYzEzNzkwZDciLCJpc3MiOiJ3ZWIzLXN0b3JhZ2UiLCJpYXQiOjE2MjkwMjg4NTc2MTMsIm5hbWUiOiJwMnBnYW1lIn0.SFCvwiJ5tXhGAgTmRQcHAnO1YEIW37S29uFTNHavWzU";
+  return process.env.REACT_APP_WEB3STORAGE_TOKEN;
 }
 
 function makeStorageClient() {
@@ -31,7 +32,6 @@ function makeFileObjects(gameData) {
 async function storeFiles(gameData, setCid) {
   const client = makeStorageClient();
   const cid = await client.put(makeFileObjects(gameData));
-  console.log("stored files with cid:", cid);
   setCid(cid);
   return cid;
 }
@@ -41,7 +41,6 @@ const sendMessage = async (libp2p, message) => {
   libp2p.peerStore.peers.forEach(async (peerData) => {
     // If they dont support the game protocol, ignore
     if (!peerData.protocols.includes(GameProtocol.PROTOCOL)) return;
-    console.log("what ?????????????????????", peerData);
 
     // If we're not connected, ignore
     const connection = libp2p.connectionManager.get(peerData.id);
@@ -105,7 +104,6 @@ function calculateNextValue(squares) {
 }
 
 function calculateWinner(squares) {
-  console.log("sq", squares);
   const lines = [
     [0, 1, 2],
     [3, 4, 5],
@@ -137,37 +135,34 @@ function TicTacToe({ libp2p, player }) {
     history: [Array(9).fill(null)],
     currentStep: 0,
   });
-  const [test, setTest] = useState(false);
+  const [sentMessage, setSentMessage] = useState(false);
   const [gameClient, setGameClient] = useState(false);
   const [gameHistoryCid, setGameHistoryCid] = useState(null);
 
-  console.log(
-    "test",
-    test,
-    typeof test,
-    "histo",
-    gameState.history,
-    "cureent",
-    gameState.currentStep
-  );
-
   useEffect(() => {
-    if (test) {
-      console.log("test entered");
-      let receivedData = JSON.parse(test.message);
-      console.log(receivedData, typeof receivedData);
-      dispatch({ history: receivedData, currentStep: receivedData.length - 1 });
+    if (sentMessage) {
+      let receivedData = JSON.parse(sentMessage.message);
+      if (typeof receivedData === "string") {
+        if (receivedData === "restart") {
+          restart();
+        }
+      } else {
+        dispatch({
+          history: receivedData,
+          currentStep: receivedData.length - 1,
+        });
+      }
       // setHistory(receivedData);
       // setCurrentStep(receivedData.length);
     }
-  }, [test]);
+  }, [sentMessage]);
 
   useEffect(() => {
     if (!gameClient) {
       // Add game handler
       libp2p.handle(
         GameProtocol.PROTOCOL,
-        GameProtocol.messageReceivedHandler(setTest)
+        GameProtocol.messageReceivedHandler(setSentMessage)
       );
 
       // Set the game client to so the handler add code doesn't run again
@@ -183,7 +178,8 @@ function TicTacToe({ libp2p, player }) {
   const nextValue = calculateNextValue(currentSquares);
   const status = calculateStatus(winner, currentSquares, nextValue);
   const web3Upload =
-    status.includes("Winner") || status.includes("Scratch")
+    (status.includes("Winner") || status.includes("Scratch")) &&
+    gameHistoryCid == null
       ? storeFiles(gameState.history, setGameHistoryCid)
       : null;
 
@@ -209,9 +205,17 @@ function TicTacToe({ libp2p, player }) {
 
   function restart() {
     dispatch({ history: [Array(9).fill(null)], currentStep: 0 });
-    sendMessage(libp2p, JSON.stringify([Array(9).fill(null)]));
+    setGameHistoryCid(null);
+    setSentMessage(false);
+    // sendMessage(libp2p, JSON.stringify([Array(9).fill(null)]));
     // setHistory([Array(9).fill(null)]);
     // setCurrentStep(0);
+  }
+  function playAgain() {
+    dispatch({ history: [Array(9).fill(null)], currentStep: 0 });
+    setGameHistoryCid(null);
+    setSentMessage(false);
+    sendMessage(libp2p, JSON.stringify("restart"));
   }
 
   // const moves = gameState.history.map((stepSquares, step) => {
@@ -227,30 +231,42 @@ function TicTacToe({ libp2p, player }) {
   // });
 
   return (
-    <div className="h-screen w-screen flex flex-col sm:items-center justify-center bg-gray-100">
-      <div className="p-2 sm:w-1/2 xl:h-1/2  flex flex-col sm:justify-center bg-white shadow-xl rounded">
-        <h1 className="mb-2 mx-auto text-xl font-bold">{`You are Player: ${player}`}</h1>
-        <div className="mx-auto box-content h-60 w-60 border-2 border-red-200 rounded">
-          <Board onClick={selectSquare} squares={currentSquares} />
+    <div>
+      {(status.includes("Winner") || status.includes("Scratch")) &&
+      gameHistoryCid == null ? (
+        <Loading displayMessage={"Uploading Game history to web3.storage"} />
+      ) : (
+        <div className="h-screen w-screen flex flex-col sm:items-center justify-center bg-gray-100">
+          <div className="p-2 sm:w-4/6 sm:h-4/6  flex flex-col sm:justify-center bg-white shadow-xl rounded">
+            <h1 className="mb-2 mx-auto text-xl font-bold">{`You are Player: ${player}`}</h1>
+            <div className="mx-auto box-content h-60 w-60 border-2 border-red-200 rounded">
+              <Board onClick={selectSquare} squares={currentSquares} />
+            </div>
+            <div className="mt-2 mx-auto text-xl font-bold">
+              <div>{status}</div>
+              {/* <ol>{moves}</ol> */}
+            </div>
+            {status.includes("Winner") || status.includes("Scratch") ? (
+              <button
+                className="w-32 sm:w-36 h-12 mx-auto mt-8 text-white text-xl sm:text-2xl font-bold bg-red-500 border-4 rounded border-red-300 hover:bg-red-400"
+                onClick={playAgain}
+              >
+                Play Again
+              </button>
+            ) : null}
+            {gameHistoryCid ? (
+              <div className="mt-2 mx-auto text-center text-xl font-bold hover:text-blue-700">
+                <a
+                  target="_blank"
+                  href={`https://${gameHistoryCid}.ipfs.dweb.link/`}
+                >
+                  Click to view Game history uploded to web3.storage
+                </a>
+              </div>
+            ) : null}
+          </div>
         </div>
-        <div className="mt-2 mx-auto text-xl font-bold">
-          <div>{status}</div>
-          {/* <ol>{moves}</ol> */}
-        </div>
-        {status.includes("Winner") || status.includes("Scratch") ? (
-          <button
-            className="w-32 sm:w-36 h-12 mx-auto mt-8 text-white text-xl sm:text-2xl font-bold bg-red-500 border-4 rounded border-red-300 hover:bg-red-400"
-            onClick={restart}
-          >
-            Play Again
-          </button>
-        ) : null}
-        {gameHistoryCid ? (
-          <a target="_blank" href={`https://${gameHistoryCid}.ipfs.dweb.link/`}>
-            Click to view Game history uploded to web3.storage
-          </a>
-        ) : null}
-      </div>
+      )}
     </div>
   );
 }

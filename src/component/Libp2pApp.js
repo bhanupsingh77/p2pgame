@@ -8,27 +8,21 @@ import Bootstrap from "libp2p-bootstrap";
 import PeerId from "peer-id";
 import useLocalStorageState from "../customhooks/useLocalStorageState.js";
 import Game from "../game/Game.js";
+import Loading from "./Loading.js";
 
-const GameProtocol = require("./Test02.js");
+const GameProtocol = require("./Libp2pUtils.js");
 
-const getPeerId = async (key) => {
-  const valueInLocalStorage = window.localStorage.getItem(key);
-  if (valueInLocalStorage) {
-    let peerId = JSON.parse(valueInLocalStorage);
-    peerId = await PeerId.createFromJSON(peerId);
-    return peerId;
-  }
+const getPeerId = async () => {
   let newPeerId = await PeerId.create();
   let newPeerIdObj = newPeerId.toJSON();
-  window.localStorage.setItem(key, JSON.stringify(newPeerIdObj));
-  console.log("k", newPeerId);
   return await PeerId.createFromJSON(newPeerIdObj);
 };
-function Test01() {
+function Libp2pApp() {
   const [libp2p, setLibp2p] = useState(null);
   const [initlibp2p, setInitlibp2p] = useState(false);
   const [peerId, setPeerId] = useState(null);
   const [peerId2, setPeerId2] = useState(null);
+  const [loadingApp, setLoadingApp] = useState(true);
   // const [state, dispatch] = useReducer(reducer, initialState, init);
 
   const updatePeer2 = (peer2) => {
@@ -41,12 +35,11 @@ function Test01() {
 
   useEffect(() => {
     if (!peerId) {
-      getPeerId("peerId").then(setPeerId);
+      getPeerId().then(setPeerId);
       return;
     }
     if (!initlibp2p) {
       (async (peerId) => {
-        console.log("pw", peerId);
         // Create our libp2p node
         const libp2p = await Libp2p.create({
           peerId,
@@ -147,6 +140,7 @@ function Test01() {
         // window.libp2p = libp2p;
         setLibp2p(libp2p);
         setInitlibp2p(true);
+        setLoadingApp(false);
       })(peerId);
     }
   }, [peerId]);
@@ -156,7 +150,6 @@ function Test01() {
     libp2p.peerStore.peers.forEach(async (peerData) => {
       // If they dont support the game protocol, ignore
       if (!peerData.protocols.includes(GameProtocol.PROTOCOL)) return;
-      console.log("what ?????????????????????", peerData);
 
       // If we're not connected, ignore
       const connection = libp2p.connectionManager.get(peerData.id);
@@ -177,22 +170,19 @@ function Test01() {
 
   return (
     <div>
-      {/* <header>
-        <h1 id="status">Starting libp2p...</h1>
-      </header>
-
-      <main>
-        <pre id="output"></pre>
-      </main> */}
-      <Game
-        libp2p={libp2p}
-        peer1={peerId}
-        peer2={peerId2}
-        updatePeer2={updatePeer2}
-        handlePeer2Reset={handlePeer2Reset}
-      />
+      {loadingApp ? (
+        <Loading displayMessage={"Loading App"} />
+      ) : (
+        <Game
+          libp2p={libp2p}
+          peer1={peerId}
+          peer2={peerId2}
+          updatePeer2={updatePeer2}
+          handlePeer2Reset={handlePeer2Reset}
+        />
+      )}
     </div>
   );
 }
 
-export default Test01;
+export default Libp2pApp;

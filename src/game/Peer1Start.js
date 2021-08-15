@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { DuplicateIcon, ArrowCircleLeftIcon } from "@heroicons/react/outline";
 import Peer1Connect2Game from "./Peer1Connect2Game.js";
-const GameProtocol = require("../component/Test02.js");
+const GameProtocol = require("../component/Libp2pUtils.js");
 
 export default function Peer1Start({
   libp2p,
@@ -13,8 +13,6 @@ export default function Peer1Start({
   const [connectionState, setConnectionState] = useState(false);
   const [peerId2, setPeerId2] = useState(null);
   useEffect(() => {
-    console.log("entered");
-    console.log(connectionState, "-1");
     if (connectionState) {
       // setLoading(false);
       updatePeer2(peerId2);
@@ -29,15 +27,12 @@ export default function Peer1Start({
     //checking peer in relay server list
     libp2p.peerStore.peers.forEach(async (peerData) => {
       // If they dont support the game protocol, ignore
-      console.log("r0", peerData.id.toB58String());
       if (
         peerData.protocols.includes(GameProtocol.PROTOCOL) &&
         peer2 === peerData.id.toB58String()
       ) {
-        console.log("r", peerData.id.toB58String());
         setPeerId2(peer2);
         setConnectionState(true);
-        console.log(connectionState, "lol");
         return;
       } else {
         return;
@@ -46,7 +41,6 @@ export default function Peer1Start({
   };
   const handleConnection = async (e) => {
     e.preventDefault();
-    // console.log("9", e.target.elements["peer2Id"].value === null);
     let peer2 = e.target.elements["peer2Id"].value;
     if (!peer2) {
       alert("Enter peerId you want to connect to");
@@ -56,18 +50,9 @@ export default function Peer1Start({
       alert("You have entered you own id ");
       return;
     }
-    console.log(connectionState, "0");
     setLoading(true);
     VerifyPeerInRelayServer(libp2p, peer2);
     await sleep(1000);
-    // console.log(connectionState, "2");
-    // if (connectionState) {
-    //   setLoading(false);
-    //   updatePeer2(peer2);
-    // } else {
-    //   setLoading(false);
-    //   alert("Failed to connnect to peer try again");
-    // }
   };
 
   return (
