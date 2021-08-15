@@ -9,8 +9,9 @@ import PeerId from "peer-id";
 import useLocalStorageState from "../customhooks/useLocalStorageState.js";
 import Game from "../game/Game.js";
 import Loading from "./Loading.js";
+import { send, handler, PROTOCOL } from "./Libp2pUtils.js";
 
-const GameProtocol = require("./Libp2pUtils.js");
+// const = require("./Libp2pUtils.js");
 
 const getPeerId = async () => {
   let newPeerId = await PeerId.create();
@@ -104,22 +105,20 @@ function Libp2pApp() {
         // });
 
         // Add game handler
-        libp2p.handle(GameProtocol.PROTOCOL, GameProtocol.handler);
+        libp2p.handle(PROTOCOL, handler);
 
         //message sender
         libp2p.peerStore.peers.forEach(async (peerData) => {
           // If they dont support the game protocol, ignore
-          if (!peerData.protocols.includes(GameProtocol.PROTOCOL)) return;
+          if (!peerData.protocols.includes(PROTOCOL)) return;
 
           // If we're not connected, ignore
           const connection = libp2p.connectionManager.get(peerData.id);
           if (!connection) return;
 
           try {
-            const { stream } = await connection.newStream([
-              GameProtocol.PROTOCOL,
-            ]);
-            await GameProtocol.send("hello", stream);
+            const { stream } = await connection.newStream([PROTOCOL]);
+            await send("hello", stream);
           } catch (err) {
             console.error(
               "Could not negotiate game protocol stream with peer",
@@ -149,16 +148,16 @@ function Libp2pApp() {
     //message sender
     libp2p.peerStore.peers.forEach(async (peerData) => {
       // If they dont support the game protocol, ignore
-      if (!peerData.protocols.includes(GameProtocol.PROTOCOL)) return;
+      if (!peerData.protocols.includes(PROTOCOL)) return;
 
       // If we're not connected, ignore
       const connection = libp2p.connectionManager.get(peerData.id);
       if (!connection) return;
 
       try {
-        const { stream } = await connection.newStream([GameProtocol.PROTOCOL]);
+        const { stream } = await connection.newStream([PROTOCOL]);
         let m = JSON.stringify([12, "2121", "sss"]);
-        await GameProtocol.send(m, stream);
+        await send(m, stream);
       } catch (err) {
         console.error(
           "Could not negotiate game protocol stream with peer",
