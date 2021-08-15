@@ -1,9 +1,14 @@
 import { useEffect, useState } from "react";
-import { DuplicateIcon } from "@heroicons/react/outline";
+import { DuplicateIcon, ArrowCircleLeftIcon } from "@heroicons/react/outline";
 import Peer1Connect2Game from "./Peer1Connect2Game.js";
 const GameProtocol = require("../component/Test02.js");
 
-export default function Peer1Start({ libp2p, peer1, updatePeer2 }) {
+export default function Peer1Start({
+  libp2p,
+  peer1,
+  updatePeer2,
+  handleGameStateReset,
+}) {
   const [loading, setLoading] = useState(false);
   const [connectionState, setConnectionState] = useState(false);
   const [peerId2, setPeerId2] = useState(null);
@@ -71,6 +76,14 @@ export default function Peer1Start({ libp2p, peer1, updatePeer2 }) {
         <Peer1Connect2Game />
       ) : (
         <div className="h-screen w-screen flex flex-col justify-center bg-gray-100">
+          <div>
+            <button
+              onClick={handleGameStateReset}
+              className="m-2 sm:m-4 absolute top-0 hover:text-red-500"
+            >
+              <ArrowCircleLeftIcon className="h-8 w-8 sm:h-14 sm:w-14" />
+            </button>
+          </div>
           <div className="h-96 sm:w-5/12 flex flex-col bg-white rounded shadow-xl  justify-center items-center sm:self-center ">
             <div className="mb-6 text-3xl font-bold">
               <h1>Your Peer Id:</h1>

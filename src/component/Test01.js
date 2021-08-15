@@ -21,7 +21,8 @@ const getPeerId = async (key) => {
   let newPeerId = await PeerId.create();
   let newPeerIdObj = newPeerId.toJSON();
   window.localStorage.setItem(key, JSON.stringify(newPeerIdObj));
-  return newPeerIdObj;
+  console.log("k", newPeerId);
+  return await PeerId.createFromJSON(newPeerIdObj);
 };
 function Test01() {
   const [libp2p, setLibp2p] = useState(null);
@@ -32,6 +33,10 @@ function Test01() {
 
   const updatePeer2 = (peer2) => {
     setPeerId2(peer2);
+  };
+
+  const handlePeer2Reset = (peer2) => {
+    setPeerId2(null);
   };
 
   useEffect(() => {
@@ -105,12 +110,12 @@ function Test01() {
         //   log(`Disconnected from ${connection.remotePeer.toB58String()}`);
         // });
 
-        // Add chat handler
+        // Add game handler
         libp2p.handle(GameProtocol.PROTOCOL, GameProtocol.handler);
 
         //message sender
         libp2p.peerStore.peers.forEach(async (peerData) => {
-          // If they dont support the chat protocol, ignore
+          // If they dont support the game protocol, ignore
           if (!peerData.protocols.includes(GameProtocol.PROTOCOL)) return;
 
           // If we're not connected, ignore
@@ -124,7 +129,7 @@ function Test01() {
             await GameProtocol.send("hello", stream);
           } catch (err) {
             console.error(
-              "Could not negotiate chat protocol stream with peer",
+              "Could not negotiate game protocol stream with peer",
               err
             );
           }
@@ -139,7 +144,7 @@ function Test01() {
         // );
 
         // Export libp2p to the window so you can play with the API
-        window.libp2p = libp2p;
+        // window.libp2p = libp2p;
         setLibp2p(libp2p);
         setInitlibp2p(true);
       })(peerId);
@@ -149,7 +154,7 @@ function Test01() {
   const sendmessage = async (libp2p) => {
     //message sender
     libp2p.peerStore.peers.forEach(async (peerData) => {
-      // If they dont support the chat protocol, ignore
+      // If they dont support the game protocol, ignore
       if (!peerData.protocols.includes(GameProtocol.PROTOCOL)) return;
       console.log("what ?????????????????????", peerData);
 
@@ -163,7 +168,7 @@ function Test01() {
         await GameProtocol.send(m, stream);
       } catch (err) {
         console.error(
-          "Could not negotiate chat protocol stream with peer",
+          "Could not negotiate game protocol stream with peer",
           err
         );
       }
@@ -184,6 +189,7 @@ function Test01() {
         peer1={peerId}
         peer2={peerId2}
         updatePeer2={updatePeer2}
+        handlePeer2Reset={handlePeer2Reset}
       />
     </div>
   );
